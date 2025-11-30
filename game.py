@@ -4,12 +4,10 @@ from pathlib import Path
 import pygame
 
 from assets import (
-    generate_ambient_loop,
     load_image,
     load_music,
-    load_or_generate_sound,
+    load_sound,
     load_spritesheet_row,
-    scale_image_to_fit,
 )
 from constants import (
     BOAT_IMAGE_MAX_SIZE,
@@ -74,10 +72,9 @@ class LuckyLuresGame:
         base_path = Path(__file__).resolve().parent
         assets_dir = base_path / "assets"
 
-        self.splash_snd = load_or_generate_sound(str(assets_dir / "splash.wav"), fallback_freq=520, duration_ms=180)
-        self.hit_snd = load_or_generate_sound(str(assets_dir / "hit.wav"), fallback_freq=180, duration_ms=220)
+        self.splash_snd = load_sound(str(assets_dir / "splash.wav"))
+        self.hit_snd = load_sound(str(assets_dir / "hit.wav"))
 
-        self.ambient_loop = None
         music_loaded = False
         mp3_candidate = next((p for p in assets_dir.glob("*.mp3")), None)
         if mp3_candidate:
@@ -87,9 +84,6 @@ class LuckyLuresGame:
         if music_loaded:
             pygame.mixer.music.set_volume(0.45)
             pygame.mixer.music.play(-1)
-        else:
-            self.ambient_loop = generate_ambient_loop()
-            self.ambient_loop.play(loops=-1, fade_ms=800)
 
         self.bg_image = _load_first_image(
             base_path,

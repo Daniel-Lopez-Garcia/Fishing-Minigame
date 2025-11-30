@@ -1,6 +1,4 @@
-import math
 import os
-import array
 import pygame
 
 
@@ -23,38 +21,6 @@ def load_music(path):
         return True
     except pygame.error:
         return False
-
-
-def _generate_tone_sound(frequency=440, duration_ms=250, volume=0.35):
-    """Create a simple sine wave Sound as a fallback when assets are missing."""
-    init = pygame.mixer.get_init()
-    if not init:
-        # default mixer settings if not initialized yet
-        pygame.mixer.init()
-        init = pygame.mixer.get_init()
-    sample_rate, fmt, channels = init
-
-    bits = abs(fmt)
-    if bits not in (8, 16):
-        bits = 16
-    amplitude = int((2 ** (bits - 1) - 1) * volume)
-    sample_count = int(sample_rate * (duration_ms / 1000.0))
-
-    samples = array.array("h")
-    for i in range(sample_count):
-        sample_val = int(amplitude * math.sin(2 * math.pi * frequency * i / sample_rate))
-        for _ in range(channels):
-            samples.append(sample_val)
-
-    return pygame.mixer.Sound(buffer=samples.tobytes())
-
-
-def load_or_generate_sound(path, fallback_freq=440, duration_ms=250, volume=0.35):
-    """Load a sound if available; otherwise return a generated tone."""
-    snd = load_sound(path)
-    if snd:
-        return snd
-    return _generate_tone_sound(frequency=fallback_freq, duration_ms=duration_ms, volume=volume)
 
 
 def load_spritesheet_row(path, columns, rows=None, row_index=0, max_size=None):
@@ -85,11 +51,6 @@ def load_spritesheet_row(path, columns, rows=None, row_index=0, max_size=None):
             frame = scale_image_to_fit(frame, max_size)
         frames.append(frame)
     return frames
-
-
-def generate_ambient_loop(frequency=180, duration_ms=800, volume=0.18):
-    """Generate a low-volume tone to use as background 'music' if none is available."""
-    return _generate_tone_sound(frequency=frequency, duration_ms=duration_ms, volume=volume)
 
 
 def scale_image_to_fit(surface, max_size):
