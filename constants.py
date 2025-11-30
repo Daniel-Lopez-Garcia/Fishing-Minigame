@@ -1,15 +1,15 @@
-"""Game-wide constants and configuration values."""
 
-# Screen / timing
+
+#pantalla / timing
 WIDTH, HEIGHT = 900, 600
 FPS = 60
 
-# Speeds
+#velocidades
 PLAYER_SPEED = 5
 LURE_SPEED = 10
 RIVER_SCROLL_SPEED = 2
 
-# Game balance
+#settings
 GAME_TIME_SECONDS = 60
 MAX_HEALTH = 3
 
@@ -22,7 +22,7 @@ BASE_OBSTACLE_SPEED = 4
 BOAT_IMAGE_MAX_SIZE = (140, 80)
 FISH_IMAGE_MAX_SIZE = (90, 50)
 
-# Colors
+#colores
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (0, 200, 0)
@@ -32,7 +32,7 @@ YELLOW = (230, 220, 50)
 GRAY = (70, 70, 70)
 RIVER_BLUE = (30, 120, 180)
 
-# Game states
+#estados de juego
 STATE_MENU = "MENU"
 STATE_PLAYING = "PLAYING"
 STATE_PAUSED = "PAUSED"

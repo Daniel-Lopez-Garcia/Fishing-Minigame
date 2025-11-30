@@ -1,15 +1,8 @@
 import random
 from pathlib import Path
-
 import pygame
-
-from assets import (
-    load_image,
-    load_music,
-    load_sound,
-    load_spritesheet_row,
-)
-from constants import (
+from assets import (load_image, load_music, load_sound,)
+from constants import ( 
     BOAT_IMAGE_MAX_SIZE,
     BASE_OBSTACLE_SPEED,
     FISH_IMAGE_MAX_SIZE,
@@ -31,18 +24,21 @@ from sprites import Fish, Lure, Obstacle, PlayerBoat
 
 
 def _load_first_image(base_path, candidates, **kwargs):
-    """Try a list of filenames (relative to base_path) in order; return the first that loads."""
+    #intenta una lista en orden de imagenes
+
     for name in candidates:
         img = load_image(str(base_path / name), **kwargs)
+
         if img:
             return img
     return None
 
 
 def _load_sequence(base_path, names, **kwargs):
-    """Load a sequence of image frames; returns list of Surfaces."""
+    #para cargarlos frames
     frames = []
     for name in names:
+
         img = load_image(str(base_path / name), **kwargs)
         if img:
             frames.append(img)
@@ -50,9 +46,10 @@ def _load_sequence(base_path, names, **kwargs):
 
 
 def _rotate_frames(frames, angle):
-    """Return copies of frames rotated by angle degrees."""
+    #rota los frames para cuando sale por otros angulos
     if not frames:
         return []
+    
     return [pygame.transform.rotate(f, angle) for f in frames]
 
 
@@ -62,9 +59,12 @@ class LuckyLuresGame:
         pygame.mixer.init()
 
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Lucky Lures: River Rush")
+
+        pygame.display.set_caption("Lucky Lures: River Rush") #hay que cambiarlo me thinks
+
         self.clock = pygame.time.Clock()
 
+        #font sizes
         self.font_big = pygame.font.SysFont("arial", 48)
         self.font_med = pygame.font.SysFont("arial", 28)
         self.font_small = pygame.font.SysFont("arial", 20)
@@ -75,8 +75,10 @@ class LuckyLuresGame:
         self.splash_snd = load_sound(str(assets_dir / "splash.wav"))
         self.hit_snd = load_sound(str(assets_dir / "hit.wav"))
 
-        music_loaded = False
+        music_loaded = False #por defalut, se cambia a true si no hay error al cargarla
+
         mp3_candidate = next((p for p in assets_dir.glob("*.mp3")), None)
+
         if mp3_candidate:
             music_loaded = load_music(str(mp3_candidate))
         if not music_loaded:
@@ -85,6 +87,7 @@ class LuckyLuresGame:
             pygame.mixer.music.set_volume(0.45)
             pygame.mixer.music.play(-1)
 
+        
         self.bg_image = _load_first_image(
             base_path,
             (
@@ -153,7 +156,7 @@ class LuckyLuresGame:
             if img:
                 self.friendly_fish_images.append(img)
 
-        # Auto-load any other fish sprites dropped into assets (png/jpg/gif) excluding known files
+        #escoge automaticamente fotos de peces excepto:
         skip_names = {
             "boat.png", "boat.jpg", "boat.gif",
             "bg_2d.png", "bg_2d.jpg", "bg_2d.gif",
@@ -162,9 +165,12 @@ class LuckyLuresGame:
             "predator.png", "predator.jpg", "predator.gif",
             "bait.png",
         }
+
         skip_names |= obstacle_frame_names | predator_frame_names
         for ext in ("*.png", "*.jpg", "*.gif"):
+
             for path in assets_dir.glob(ext):
+
                 if path.name.lower() in skip_names:
                     continue
                 img = load_image(
@@ -173,6 +179,7 @@ class LuckyLuresGame:
                     convert_alpha=True,
                     colorkey=(255, 255, 255),
                 )
+
                 if img:
                     self.friendly_fish_images.append(img)
 
@@ -196,7 +203,10 @@ class LuckyLuresGame:
             max_size=FISH_IMAGE_MAX_SIZE,
             convert_alpha=True,
             colorkey=(255, 255, 255),
+
         )
+
+
         if predator_img:
             self.predator_fish_images.append(predator_img)
         predator_frames = _load_sequence(
@@ -207,13 +217,18 @@ class LuckyLuresGame:
             colorkey=(255, 255, 255),
         )
         self.predator_fish_images.extend(predator_frames)
-        # Also treat any files with predator-ish names as predators
+
+
+        #puse esto por si las moscas, si añadimos luego mas predators
         predator_keywords = ("predator", "shark", "piranha", "angry", "evil")
         for ext in ("*.png", "*.jpg", "*.gif"):
+
             for path in assets_dir.glob(ext):
                 name_lower = path.name.lower()
+
                 if name_lower in obstacle_frame_names:
                     continue
+
                 if any(k in name_lower for k in predator_keywords):
                     img = load_image(
                         str(path),
@@ -224,30 +239,28 @@ class LuckyLuresGame:
                     if img:
                         self.predator_fish_images.append(img)
 
-        # If no predator-specific art exists, tint friendly sprites to use as predators.
+        #if no predator images exists
         if not self.predator_fish_images and self.friendly_fish_images:
+            #usa fotos existentes
+
             for img in self.friendly_fish_images:
                 tinted = img.copy()
                 overlay = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
+
                 overlay.fill((220, 60, 60, 255))
+
                 tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 self.predator_fish_images.append(tinted)
 
+        #no tocar
         self.obstacle_frames = _load_sequence(
+
             assets_dir,
             ["shark1.png", "shark2.png", "shark3.png", "shark4.png"],
             max_size=(100, 70),
             convert_alpha=True,
             colorkey=(255, 255, 255),
         )
-        if not self.obstacle_frames:
-            self.obstacle_frames = load_spritesheet_row(
-                str(assets_dir / "hai-fin-shadow.png"),
-                columns=8,
-                rows=6,
-                row_index=0,
-                max_size=(80, 60),
-            )
 
         self.state = STATE_MENU
         self.score = 0
@@ -288,9 +301,11 @@ class LuckyLuresGame:
         self.obstacle_spawn_interval = OBSTACLE_SPAWN_INTERVAL
 
     def handle_menu_events(self, events):
+
         for event in events:
             if event.type == pygame.QUIT:
                 return False
+            
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 self.reset_game()
                 self.state = STATE_PLAYING
@@ -300,26 +315,34 @@ class LuckyLuresGame:
         for event in events:
             if event.type == pygame.QUIT:
                 return False
+            
             if event.type == pygame.KEYDOWN:
+
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
                     self.state = STATE_PAUSED
                 if event.key == pygame.K_SPACE:
                     if len(self.lures) < 3:
+
                         lure = Lure(self.player.rect.centerx,
                                     self.player.rect.centery,
                                     self.player.direction,
                                     sprite_image=self.lure_image)
+                        
                         self.all_sprites.add(lure)
                         self.lures.add(lure)
+
                         if self.splash_snd:
                             self.splash_snd.play()
         return True
 
     def handle_paused_events(self, events):
         for event in events:
+
             if event.type == pygame.QUIT:
                 return False
+            
             if event.type == pygame.KEYDOWN:
+
                 if event.key in (pygame.K_ESCAPE, pygame.K_p, pygame.K_RETURN):
                     self.state = STATE_PLAYING
         return True
@@ -328,6 +351,7 @@ class LuckyLuresGame:
         for event in events:
             if event.type == pygame.QUIT:
                 return False
+            
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 self.state = STATE_MENU
         return True
@@ -342,41 +366,54 @@ class LuckyLuresGame:
             self.last_fish_spawn = now
             y = random.randint(80, HEIGHT - 250)
             x = random.randint(50, WIDTH - 50)
+
             is_predator = random.random() < 0.3
+
             fish = Fish(x, y, is_predator,
                         friendly_images=self.friendly_fish_images,
                         predator_images=self.predator_fish_images)
+            
             self.all_sprites.add(fish)
             self.fish_group.add(fish)
 
         if now - self.last_obstacle_spawn >= self.obstacle_spawn_interval:
             self.last_obstacle_spawn = now
-            # After halfway mark, let sharks (obstacle frames) come from any edge
+            #desoues de 30 segundos, tiburones vienen de cualquier lado
+
+
             if self.time_left <= GAME_TIME_SECONDS / 2 and self.obstacle_frames:
+
                 direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
                 if direction == "DOWN":
                     x = random.randint(40, WIDTH - 40)
                     frames = _rotate_frames(self.obstacle_frames, 0)
                     obstacle = Obstacle(x, -20, frames=frames, velocity=(0, BASE_OBSTACLE_SPEED + random.uniform(-1, 2)))
+                
                 elif direction == "UP":
                     x = random.randint(40, WIDTH - 40)
                     frames = _rotate_frames(self.obstacle_frames, 180)
                     obstacle = Obstacle(x, HEIGHT + 20, frames=frames, velocity=(0, -(BASE_OBSTACLE_SPEED + random.uniform(-1, 2))))
+                
                 elif direction == "LEFT":
                     y = random.randint(40, HEIGHT - 40)
                     frames = _rotate_frames(self.obstacle_frames, -90)
                     obstacle = Obstacle(WIDTH + 20, y, frames=frames, velocity=(-(BASE_OBSTACLE_SPEED + random.uniform(-1, 2)), 0))
+                
                 else:  # RIGHT
                     y = random.randint(40, HEIGHT - 40)
                     frames = _rotate_frames(self.obstacle_frames, 90)
                     obstacle = Obstacle(-20, y, frames=frames, velocity=((BASE_OBSTACLE_SPEED + random.uniform(-1, 2)), 0))
             else:
+
                 x = random.randint(40, WIDTH - 40)
                 obstacle = Obstacle(x, -20, frames=self.obstacle_frames)
+
+
             self.all_sprites.add(obstacle)
             self.obstacles.add(obstacle)
 
     def update_playing(self, dt_ms):
+
         self.time_left -= dt_ms / 1000.0
         if self.time_left <= 0:
             self.time_left = 0
@@ -400,11 +437,14 @@ class LuckyLuresGame:
             lure.update()
 
         hits = pygame.sprite.groupcollide(self.fish_group, self.lures, True, True)
+
         for fish in hits:
             gained = 50 if fish.is_predator else 20
             self.score += gained
+
             x = random.randint(50, WIDTH - 50)
             y = random.randint(80, HEIGHT - 250)
+
             new_fish = Fish(x, y, random.random() < 0.3,
                             friendly_images=self.friendly_fish_images,
                             predator_images=self.predator_fish_images)
@@ -412,12 +452,14 @@ class LuckyLuresGame:
             self.fish_group.add(new_fish)
 
         player_obstacle_hits = pygame.sprite.spritecollide(self.player, self.obstacles, True)
+
         if player_obstacle_hits:
             self.player.take_damage(1)
             if self.hit_snd:
                 self.hit_snd.play()
 
         preds = [f for f in self.fish_group if f.is_predator]
+
         for fish in preds:
             if self.player.rect.colliderect(fish.rect):
                 self.player.take_damage(1)
@@ -436,22 +478,28 @@ class LuckyLuresGame:
         pass
 
     def draw_river_background(self):
+
         if self.bg_image:
             bg_height = self.bg_image.get_height()
             y_offset = int(self.bg_offset) % bg_height
             start_y = y_offset - bg_height
+
             while start_y < HEIGHT:
                 self.screen.blit(self.bg_image, (0, start_y))
                 start_y += bg_height
+
         else:
             self.screen.fill(RIVER_BLUE)
             band_height = 40
+
             for i in range(0, HEIGHT // band_height + 2):
                 y = (i * band_height + int(self.bg_offset * 0.5)) % HEIGHT
+
                 pygame.draw.rect(self.screen, (20, 100, 160),
                                  (0, y, WIDTH, band_height // 2))
 
     def draw_hud(self):
+
         text_score = self.font_small.render(f"Score: {self.score}", True, WHITE)
         self.screen.blit(text_score, (10, 10))
 
@@ -462,6 +510,7 @@ class LuckyLuresGame:
             pygame.draw.rect(self.screen, RED, (WIDTH - 25 - i * 20, 10, 15, 15))
 
     def draw_menu(self):
+
         self.draw_river_background()
 
         title = self.font_big.render("Lucky Lures: River Rush", True, WHITE)
@@ -473,22 +522,27 @@ class LuckyLuresGame:
         self.screen.blit(tip, (WIDTH // 2 - tip.get_width() // 2, HEIGHT // 2 + 40))
 
     def draw_playing(self):
+
         self.draw_river_background()
-        # Draw fishing lines from boat to each lure
+        #dibujar el fishingl ine
+       
         if self.player:
             for lure in self.lures:
                 pygame.draw.line(self.screen, WHITE, self.player.rect.center, lure.rect.center, 2)
+
         self.all_sprites.draw(self.screen)
         self.draw_hud()
 
     def draw_paused(self):
         self.draw_playing()
+
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.screen.blit(overlay, (0, 0))
 
         text = self.font_big.render("PAUSED", True, WHITE)
         msg = self.font_med.render("Press P or ENTER to Resume", True, WHITE)
+
         self.screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 40))
         self.screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 + 10))
 
@@ -506,7 +560,9 @@ class LuckyLuresGame:
         self.screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 3 + 160))
 
     def run(self):
+
         running = True
+        
         while running:
             dt_ms = self.clock.tick(FPS)
 

@@ -97,10 +97,7 @@ class Lure(pygame.sprite.Sprite):
 
 
 class Fish(pygame.sprite.Sprite):
-    """
-    Fish with simple two-frame color "animation".
-    Some are predators (red), others normal (blue).
-    """
+   
     def __init__(self, x, y, is_predator=False,
                  friendly_images=None, predator_images=None):
         super().__init__()
@@ -159,7 +156,7 @@ class Fish(pygame.sprite.Sprite):
 
 
 class Obstacle(pygame.sprite.Sprite):
-    """Simple log/rock (or shark) moving along a vector."""
+    
     def __init__(self, x, y, frames=None, velocity=(0, 0)):
         super().__init__()
         self.frames = frames or []
@@ -175,7 +172,7 @@ class Obstacle(pygame.sprite.Sprite):
             base = BASE_OBSTACLE_SPEED + random.uniform(-1, 2)
             self.vx, self.vy = (0, base)
         self.anim_timer = 0
-        self.anim_interval = 120  # ms
+        self.anim_interval = 120  # milisegs
 
     def update(self, dt_ms):
         if self.frames:
@@ -189,6 +186,7 @@ class Obstacle(pygame.sprite.Sprite):
 
         self.rect.x += self.vx
         self.rect.y += self.vy
-        # give some margin off screen before killing
+        
+
         if self.rect.top > HEIGHT + 100 or self.rect.bottom < -100 or self.rect.right < -100 or self.rect.left > WIDTH + 100:
             self.kill()
