@@ -16,23 +16,24 @@ from constants import (
     PLAYER_SPEED,
 )
 
-
+#Clase de bote
 class PlayerBoat(pygame.sprite.Sprite):
     def __init__(self, x, y, sprite_image=None):
         super().__init__()
+        #busca la img
         if sprite_image:
             self.base_image = sprite_image.copy()
-        else:
+        else: # no la encuentra
             self.base_image = pygame.Surface((60, 30))
             self.base_image.fill(YELLOW)
-
+        #rote con el jugador
         self.images = {
             "UP": self.base_image,
             "DOWN": pygame.transform.rotate(self.base_image, 180),
             "LEFT": pygame.transform.rotate(self.base_image, 90),
             "RIGHT": pygame.transform.rotate(self.base_image, -90),
         }
-        self.direction = "UP"
+        self.direction = "UP" # default
         self.image = self.images[self.direction]
         self.rect = self.image.get_rect(center=(x, y))
         self.speed = PLAYER_SPEED
@@ -40,7 +41,7 @@ class PlayerBoat(pygame.sprite.Sprite):
 
     def update(self, keys):
         dx = dy = 0
-
+        #movimiento de el boat
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             dx = -self.speed
             self._set_direction("LEFT")
@@ -57,10 +58,10 @@ class PlayerBoat(pygame.sprite.Sprite):
         self.rect.x += dx
         self.rect.y += dy
         self.rect.clamp_ip(pygame.Rect(0, 0, WIDTH, HEIGHT))
-
+    #hp
     def take_damage(self, amount=1):
         self.health = max(0, self.health - amount)
-
+    #dirrecion
     def _set_direction(self, direction):
         if direction == self.direction:
             return
@@ -69,10 +70,11 @@ class PlayerBoat(pygame.sprite.Sprite):
         self.image = self.images.get(direction, self.base_image)
         self.rect = self.image.get_rect(center=prev_center)
 
-
+# clase de cebo
 class Lure(pygame.sprite.Sprite):
     def __init__(self, x, y, direction, sprite_image=None):
         super().__init__()
+        #buscamos imagen sino default
         if sprite_image:
             self.image = sprite_image.copy()
         else:
@@ -80,7 +82,7 @@ class Lure(pygame.sprite.Sprite):
             self.image.fill(WHITE)
         self.rect = self.image.get_rect(center=(x, y))
         self.direction = direction
-
+    #movimiento
     def update(self):
         if self.direction == "UP":
             self.rect.y -= LURE_SPEED
@@ -95,9 +97,9 @@ class Lure(pygame.sprite.Sprite):
                 self.rect.bottom < 0 or self.rect.top > HEIGHT):
             self.kill()
 
-
+#class peces son el obj
 class Fish(pygame.sprite.Sprite):
-   
+   #buscamos las imagines
     def __init__(self, x, y, is_predator=False,
                  friendly_images=None, predator_images=None):
         super().__init__()
@@ -105,7 +107,7 @@ class Fish(pygame.sprite.Sprite):
         image_pool = predator_images if is_predator else friendly_images
         self.base_image = None
         self.alt_image = None
-
+    #escojemos img
         if image_pool:
             chosen = random.choice(image_pool)
             self.base_image = chosen.copy()
@@ -114,7 +116,7 @@ class Fish(pygame.sprite.Sprite):
             self.base_image = pygame.Surface((40, 20), pygame.SRCALPHA)
             self.alt_image = pygame.Surface((40, 20), pygame.SRCALPHA)
 
-            if is_predator:
+            if is_predator:#shark
                 color1 = RED
                 color2 = (255, 100, 100)
             else:
@@ -126,7 +128,7 @@ class Fish(pygame.sprite.Sprite):
 
         if self.alt_image is None:
             self.alt_image = self.base_image
-
+    #dirrecion ,velocidad y pos
         self.image = self.base_image
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -136,7 +138,7 @@ class Fish(pygame.sprite.Sprite):
 
     def update(self, dt_ms):
         self.rect.x += self.direction * self.speed
-
+    #moviminento de peces con rebote de screen
         if self.rect.left < 0:
             self.rect.left = 0
             self.direction = 1
@@ -145,7 +147,7 @@ class Fish(pygame.sprite.Sprite):
             self.rect.right = WIDTH
             self.direction = -1
             self._apply_direction_image()
-
+    #que cambie la img a la pocicion que va el pez
     def _apply_direction_image(self):
         prev_center = self.rect.center
         if self.direction < 0 and self.alt_image:
@@ -159,6 +161,7 @@ class Obstacle(pygame.sprite.Sprite):
     
     def __init__(self, x, y, frames=None, velocity=(0, 0)):
         super().__init__()
+        #imagen velocidad y poss
         self.frames = frames or []
         if self.frames:
             self.frame_idx = 0
@@ -173,7 +176,7 @@ class Obstacle(pygame.sprite.Sprite):
             self.vx, self.vy = (0, base)
         self.anim_timer = 0
         self.anim_interval = 120  # milisegs
-
+        #movimeinto
     def update(self, dt_ms):
         if self.frames:
             self.anim_timer += dt_ms
@@ -187,6 +190,6 @@ class Obstacle(pygame.sprite.Sprite):
         self.rect.x += self.vx
         self.rect.y += self.vy
         
-
+        #removes obs when off screen
         if self.rect.top > HEIGHT + 100 or self.rect.bottom < -100 or self.rect.right < -100 or self.rect.left > WIDTH + 100:
             self.kill()

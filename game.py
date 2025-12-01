@@ -74,6 +74,15 @@ class LuckyLuresGame:
 
         self.splash_snd = load_sound(str(assets_dir / "splash.wav"))
         self.hit_snd = load_sound(str(assets_dir / "hit.wav"))
+        #sound for game over
+        self.game_over_snd = None
+        for candidate in (
+            "game-over-deep-male-voice-clip-352695.mp3",
+            
+        ):
+            self.game_over_snd = load_sound(str(assets_dir / candidate))
+            if self.game_over_snd:
+                break
 
         music_loaded = False #por defalut, se cambia a true si no hay error al cargarla
 
@@ -86,6 +95,7 @@ class LuckyLuresGame:
         if music_loaded:
             pygame.mixer.music.set_volume(0.45)
             pygame.mixer.music.play(-1)
+        self.music_loaded = music_loaded
 
         
         self.bg_image = _load_first_image(
@@ -168,7 +178,7 @@ class LuckyLuresGame:
 
         skip_names |= obstacle_frame_names | predator_frame_names
         for ext in ("*.png", "*.jpg", "*.gif"):
-
+                #cargamos imagenes
             for path in assets_dir.glob(ext):
 
                 if path.name.lower() in skip_names:
@@ -252,7 +262,8 @@ class LuckyLuresGame:
                 tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 self.predator_fish_images.append(tinted)
 
-        #no tocar
+        #no tocar#lo toque jijija
+        #ayuda a la secuencia de images de depredadores
         self.obstacle_frames = _load_sequence(
 
             assets_dir,
@@ -300,6 +311,20 @@ class LuckyLuresGame:
         self.fish_spawn_interval = FISH_SPAWN_INTERVAL
         self.obstacle_spawn_interval = OBSTACLE_SPAWN_INTERVAL
 
+        if self.music_loaded and not pygame.mixer.music.get_busy():
+            pygame.mixer.music.set_volume(0.45)
+            pygame.mixer.music.play(-1)
+
+    def trigger_game_over(self, reason):
+        if self.state == STATE_GAME_OVER:
+            return
+
+        self.game_over_reason = reason
+        self.state = STATE_GAME_OVER
+        pygame.mixer.music.stop()
+        if self.game_over_snd:
+            self.game_over_snd.play()
+
     def handle_menu_events(self, events):
 
         for event in events:
@@ -310,7 +335,7 @@ class LuckyLuresGame:
                 self.reset_game()
                 self.state = STATE_PLAYING
         return True
-
+    #procesando inputs
     def handle_playing_events(self, events):
         for event in events:
             if event.type == pygame.QUIT:
@@ -417,8 +442,7 @@ class LuckyLuresGame:
         self.time_left -= dt_ms / 1000.0
         if self.time_left <= 0:
             self.time_left = 0
-            self.game_over_reason = "Time's up!"
-            self.state = STATE_GAME_OVER
+            self.trigger_game_over("Time's up!")
             return
 
         elapsed = GAME_TIME_SECONDS - self.time_left
@@ -468,8 +492,7 @@ class LuckyLuresGame:
                     self.hit_snd.play()
 
         if self.player.health <= 0:
-            self.game_over_reason = "Your boat was wrecked!"
-            self.state = STATE_GAME_OVER
+            self.trigger_game_over("Your boat was wrecked!")
 
     def update_paused(self, dt_ms):
         pass
@@ -499,20 +522,20 @@ class LuckyLuresGame:
                                  (0, y, WIDTH, band_height // 2))
 
     def draw_hud(self):
-
+        
         text_score = self.font_small.render(f"Score: {self.score}", True, WHITE)
         self.screen.blit(text_score, (10, 10))
 
         text_time = self.font_small.render(f"Time: {int(self.time_left)}s", True, WHITE)
         self.screen.blit(text_time, (10, 35))
-
+        #players hp
         for i in range(self.player.health):
             pygame.draw.rect(self.screen, RED, (WIDTH - 25 - i * 20, 10, 15, 15))
 
     def draw_menu(self):
 
         self.draw_river_background()
-
+        #enter screen
         title = self.font_big.render("Lucky Lures: River Rush", True, WHITE)
         msg = self.font_med.render("Press ENTER to Start", True, WHITE)
         tip = self.font_small.render("Move with WASD/Arrows, SPACE to cast, P to pause.", True, WHITE)
@@ -535,7 +558,7 @@ class LuckyLuresGame:
 
     def draw_paused(self):
         self.draw_playing()
-
+        #pause screen
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.screen.blit(overlay, (0, 0))
@@ -548,7 +571,7 @@ class LuckyLuresGame:
 
     def draw_game_over(self):
         self.draw_river_background()
-
+    #game over screen
         title = self.font_big.render("Game Over", True, WHITE)
         reason = self.font_med.render(self.game_over_reason, True, WHITE)
         score_text = self.font_med.render(f"Final Score: {self.score}", True, WHITE)
@@ -562,7 +585,7 @@ class LuckyLuresGame:
     def run(self):
 
         running = True
-        
+        #main loop
         while running:
             dt_ms = self.clock.tick(FPS)
 
