@@ -9,7 +9,7 @@ from constants import (
 )
 
 
-#Clase de bote
+#clase de bote
 class PlayerBoat(pygame.sprite.Sprite):
     def __init__(self, x, y, sprite_image=None, sunken_image=None, name="P1"):
         super().__init__()
@@ -32,10 +32,11 @@ class PlayerBoat(pygame.sprite.Sprite):
         self.speed = PLAYER_SPEED
         self.health = MAX_HEALTH
         self.name = name
-        #scale sunken sprite smaller than the boat to avoid oversized wreck
+        #imagen de barco hundido es muy grande, se reduce
         if sunken_image:
             target_size = self.image.get_size()
-            shrink = 0.6  # render wreck smaller for clarity
+            shrink = 0.6  #60%
+
             target_size = (max(8, int(target_size[0] * shrink)),
                            max(8, int(target_size[1] * shrink)))
             self.sunken_image = pygame.transform.smoothscale(
@@ -47,7 +48,7 @@ class PlayerBoat(pygame.sprite.Sprite):
 
     def update(self, keys, controls):
         dx = dy = 0
-        #movimiento de el boat
+        #movimiento del boat
         if keys[controls["left"]]:
             dx = -self.speed
             self._set_direction("LEFT")
@@ -63,23 +64,29 @@ class PlayerBoat(pygame.sprite.Sprite):
 
         self.rect.x += dx
         self.rect.y += dy
-        self.rect.clamp_ip(pygame.Rect(0, 0, WIDTH, HEIGHT))
-
+        self.rect.clamp_ip(pygame.Rect(0, 0, WIDTH, HEIGHT)) #keeps rect/boat inside screen
     #hp
     def take_damage(self, amount=1):
+
         self.health = max(0, self.health - amount)
+
         if self.health <= 0 and not self.is_sunk:
             self.is_sunk = True
+
             prev_center = self.rect.center
+
             if self.sunken_image:
                 self.image = self.sunken_image
             self.rect = self.image.get_rect(center=prev_center)
 
     #dirrecion
     def _set_direction(self, direction):
+
         if direction == self.direction:
             return
+        
         self.direction = direction
         prev_center = self.rect.center
+        
         self.image = self.images.get(direction, self.base_image)
         self.rect = self.image.get_rect(center=prev_center)

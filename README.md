@@ -14,6 +14,8 @@ The main objective is to achieve the highest possible score before the timer run
     - Fish: https://agdawkwardgamedev.itch.io/free-fish-assets
     - Shark: https://opengameart.org/content/shark-sprites-animated-4-directional
     - Bait: https://www.vecteezy.com/vector-art/56636730-pixel-art-illustration-fishing-bob-pixelated-fishing-bobber-float-fishing-bob-bobber-icon-pixelated-for-the-pixel-art-game-and-icon-for-website-and-game-old-school-retro
+    -Boat: https://minzinn.itch.io/pixel-boats-top-down-game-assets-32x32-64x64-pixel-art-free/devlog/793239/new-pixel-asset
+
 
 ## How to Run
 1. Install Python 3.10+ and pip.
@@ -33,7 +35,5 @@ The main objective is to achieve the highest possible score before the timer run
 - Spawn rates and danger increase as time passes.
 
 ## Known Issues
-- Window is fixed to 900x600; resizing is not supported.
-- Audio depends on available codecs; if music fails to load, effects still play.
-
+- Window is fixed to 900x600.
 

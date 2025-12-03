@@ -23,7 +23,10 @@ from constants import (
     IDLE_SHARK_DELAY_MS,
     IDLE_SHARK_SPEED,
 )
-from sprites import Fish, Lure, Obstacle, PlayerBoat
+from boats import PlayerBoat
+from fish import Fish
+from lure import Lure
+from obstacle import Obstacle
 
 
 def _load_first_image(base_path, candidates, **kwargs):
@@ -72,11 +75,12 @@ class LuckyLuresGame:
         self.font_med = pygame.font.SysFont("arial", 28)
         self.font_small = pygame.font.SysFont("arial", 20)
 
-        base_path = Path(__file__).resolve().parent
+        base_path = Path(__file__).resolve().parent #consigue la carpeta parent para cargar asssets
         assets_dir = base_path / "assets"
 
         self.splash_snd = load_sound(str(assets_dir / "splash.wav"))
         self.hit_snd = load_sound(str(assets_dir / "hit.wav"))
+
         #sound for game over
         self.game_over_snd = None
         for candidate in (
@@ -121,7 +125,7 @@ class LuckyLuresGame:
             convert_alpha=False,
         )
         if self.bg_image and self.bg_image.get_size() != (WIDTH, HEIGHT):
-            self.bg_image = pygame.transform.smoothscale(self.bg_image, (WIDTH, HEIGHT))
+            self.bg_image = pygame.transform.smoothscale(self.bg_image, (WIDTH, HEIGHT)) #escalea/redimensiona
 
         self.boat_image = _load_first_image(
             base_path,
@@ -136,6 +140,7 @@ class LuckyLuresGame:
             max_size=BOAT_IMAGE_MAX_SIZE,
         )
 
+
         self.lure_image = _load_first_image(
             base_path,
             (
@@ -143,6 +148,16 @@ class LuckyLuresGame:
                 "assets/bait.png",
             ),
             max_size=(18, 18),
+            convert_alpha=True,
+        )
+
+        self.sunken_image = _load_first_image(
+            base_path,
+            (
+                "sunken.png",
+                "assets/sunken.png",
+            ),
+            max_size=BOAT_IMAGE_MAX_SIZE,
             convert_alpha=True,
         )
 
@@ -177,6 +192,7 @@ class LuckyLuresGame:
             "magicarp.png", "magicarp.jpg", "magicarp.gif",
             "predator.png", "predator.jpg", "predator.gif",
             "bait.png",
+            "sunken.png", "sunken.jpg", "sunken.gif",
         }
 
         skip_names |= obstacle_frame_names | predator_frame_names
@@ -222,9 +238,11 @@ class LuckyLuresGame:
 
         if predator_img:
             self.predator_fish_images.append(predator_img)
+
         predator_frames = _load_sequence(
             assets_dir,
             ["s1.png", "s2.png", "s3.png"],
+
             max_size=FISH_IMAGE_MAX_SIZE,
             convert_alpha=True,
             colorkey=(255, 255, 255),
@@ -258,6 +276,7 @@ class LuckyLuresGame:
 
             for img in self.friendly_fish_images:
                 tinted = img.copy()
+
                 overlay = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
 
                 overlay.fill((220, 60, 60, 255))
@@ -276,13 +295,16 @@ class LuckyLuresGame:
             colorkey=(255, 255, 255),
         )
 
+
+        #base
         self.state = STATE_MENU
         self.score = 0
-        self.time_left = GAME_TIME_SECONDS
+        self.score_p2 = 0
         self.game_over_reason = ""
 
         self.last_fish_spawn = 0
         self.last_obstacle_spawn = 0
+
         self.fish_spawn_interval = FISH_SPAWN_INTERVAL
         self.obstacle_spawn_interval = OBSTACLE_SPAWN_INTERVAL
 
@@ -290,32 +312,59 @@ class LuckyLuresGame:
 
         self.all_sprites = pygame.sprite.Group()
         self.fish_group = pygame.sprite.Group()
+
         self.obstacles = pygame.sprite.Group()
         self.lures = pygame.sprite.Group()
 
         self.player = None
+        self.player2 = None
         self.last_player_move_time = pygame.time.get_ticks()
         self.idle_threat_triggered = False
 
+        self.time_left = GAME_TIME_SECONDS
+
+    #controlers p1 y p2
+        self.controls_p1 = {
+            "up": pygame.K_w,
+            "down": pygame.K_s,
+            "left": pygame.K_a,
+            "right": pygame.K_d,
+        }
+
+
+        self.controls_p2 = {
+            "up": pygame.K_UP,
+            "down": pygame.K_DOWN,
+            "left": pygame.K_LEFT,
+            "right": pygame.K_RIGHT,
+        }
+
     def reset_game(self):
+
+
         self.all_sprites.empty()
         self.fish_group.empty()
         self.obstacles.empty()
         self.lures.empty()
 
-        self.player = PlayerBoat(WIDTH // 2, HEIGHT - 100, sprite_image=self.boat_image)
-        self.all_sprites.add(self.player)
+        self.player = PlayerBoat(WIDTH // 2 - 100, HEIGHT - 100, sprite_image=self.boat_image, sunken_image=self.sunken_image, name="P1")
+        self.player2 = PlayerBoat(WIDTH // 2 + 100, HEIGHT - 100, sprite_image=self.boat_image, sunken_image=self.sunken_image, name="P2")
+        self.all_sprites.add(self.player, self.player2)
 
         self.score = 0
+        self.score_p2 = 0
+
         self.time_left = GAME_TIME_SECONDS
         self.game_over_reason = ""
 
         current_time = pygame.time.get_ticks()
+
         self.last_fish_spawn = current_time
         self.last_obstacle_spawn = current_time
         self.fish_spawn_interval = FISH_SPAWN_INTERVAL
         self.obstacle_spawn_interval = OBSTACLE_SPAWN_INTERVAL
         self.last_player_move_time = current_time
+
         self.idle_threat_triggered = False
 
         if self.music_loaded and not pygame.mixer.music.get_busy():
@@ -328,6 +377,7 @@ class LuckyLuresGame:
 
         self.game_over_reason = reason
         self.state = STATE_GAME_OVER
+
         pygame.mixer.music.stop()
         if self.game_over_snd:
             self.game_over_snd.play()
@@ -342,6 +392,7 @@ class LuckyLuresGame:
                 self.reset_game()
                 self.state = STATE_PLAYING
         return True
+    
     #procesando inputs
     def handle_playing_events(self, events):
         for event in events:
@@ -350,15 +401,35 @@ class LuckyLuresGame:
             
             if event.type == pygame.KEYDOWN:
 
+                #pause keysS
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
                     self.state = STATE_PAUSED
-                if event.key == pygame.K_SPACE:
-                    if len(self.lures) < 3:
+
+                    #reeling keys
+                if event.key == pygame.K_SPACE and self.player and self.player.health > 0:
+                    if sum(1 for l in self.lures if l.owner == "P1") < 3:
+
 
                         lure = Lure(self.player.rect.centerx,
                                     self.player.rect.centery,
                                     self.player.direction,
-                                    sprite_image=self.lure_image)
+                                    sprite_image=self.lure_image,
+                                    owner="P1")
+                        
+                        self.all_sprites.add(lure)
+                        self.lures.add(lure)
+
+                        if self.splash_snd:
+                            self.splash_snd.play()
+
+                if event.key in (pygame.K_RSHIFT, pygame.K_RETURN) and self.player2 and self.player2.health > 0:
+                    if sum(1 for l in self.lures if l.owner == "P2") < 3:
+
+                        lure = Lure(self.player2.rect.centerx,
+                                    self.player2.rect.centery,
+                                    self.player2.direction,
+                                    sprite_image=self.lure_image,
+                                    owner="P2")
                         
                         self.all_sprites.add(lure)
                         self.lures.add(lure)
@@ -379,6 +450,7 @@ class LuckyLuresGame:
                     self.state = STATE_PLAYING
         return True
 
+
     def handle_game_over_events(self, events):
         for event in events:
             if event.type == pygame.QUIT:
@@ -390,6 +462,7 @@ class LuckyLuresGame:
 
     def update_menu(self, dt_ms):
         pass
+
 
     def spawn_entities(self):
         now = pygame.time.get_ticks()
@@ -446,10 +519,12 @@ class LuckyLuresGame:
 
     #funcion que previene que el jugador se quede quieto
     def spawn_idle_predator(self):
-        if not self.player:
+        alive_players = [p for p in (self.player, self.player2) if p and p.health > 0]
+        if not alive_players:
             return
 
-        player_pos = pygame.math.Vector2(self.player.rect.center)
+        target = random.choice(alive_players)
+        player_pos = pygame.math.Vector2(target.rect.center)
 
         #de donde vendra el ataque
         side = random.choice(("TOP", "BOTTOM", "LEFT", "RIGHT"))
@@ -481,6 +556,7 @@ class LuckyLuresGame:
     def update_playing(self, dt_ms):
 
         self.time_left -= dt_ms / 1000.0
+        
         if self.time_left <= 0:
             self.time_left = 0
             self.trigger_game_over("Time's up!")
@@ -493,9 +569,20 @@ class LuckyLuresGame:
         keys = pygame.key.get_pressed()
         self.spawn_entities()
 
-        prev_center = self.player.rect.center
-        self.player.update(keys)
-        if self.player.rect.center != prev_center:
+        moved = False
+
+
+        if self.player and self.player.health > 0:
+            prev_center = self.player.rect.center
+            self.player.update(keys, self.controls_p1)
+            moved = moved or (self.player.rect.center != prev_center)
+
+        if self.player2 and self.player2.health > 0:
+            prev_center2 = self.player2.rect.center
+            self.player2.update(keys, self.controls_p2)
+            moved = moved or (self.player2.rect.center != prev_center2)
+
+        if moved:
             self.last_player_move_time = pygame.time.get_ticks()
             self.idle_threat_triggered = False
 
@@ -514,9 +601,14 @@ class LuckyLuresGame:
 
         hits = pygame.sprite.groupcollide(self.fish_group, self.lures, True, True)
 
-        for fish in hits:
+        for fish, lures_hit in hits.items():
             gained = 50 if fish.is_predator else 20
-            self.score += gained
+            owner = lures_hit[0].owner if lures_hit else "P1"
+
+            if owner == "P2":
+                self.score_p2 += gained
+            else:
+                self.score += gained
 
             x = random.randint(50, WIDTH - 50)
             y = random.randint(80, HEIGHT - 250)
@@ -527,24 +619,38 @@ class LuckyLuresGame:
             self.all_sprites.add(new_fish)
             self.fish_group.add(new_fish)
 
-        player_obstacle_hits = pygame.sprite.spritecollide(self.player, self.obstacles, True)
+        player_obstacle_hits = pygame.sprite.spritecollide(self.player, self.obstacles, True) if self.player else []
+        player2_obstacle_hits = pygame.sprite.spritecollide(self.player2, self.obstacles, True) if self.player2 else []
 
-        if player_obstacle_hits:
+
+        if player_obstacle_hits and self.player:
             self.player.take_damage(1)
+            if self.hit_snd:
+                self.hit_snd.play()
+
+        if player2_obstacle_hits and self.player2:
+            self.player2.take_damage(1)
             if self.hit_snd:
                 self.hit_snd.play()
 
         preds = [f for f in self.fish_group if f.is_predator]
 
         for fish in preds:
-            if self.player.rect.colliderect(fish.rect):
+
+            if self.player and self.player.rect.colliderect(fish.rect):
                 self.player.take_damage(1)
                 self.player.rect.y += 15
                 if self.hit_snd:
                     self.hit_snd.play()
 
-        if self.player.health <= 0:
-            self.trigger_game_over("Your boat was wrecked!")
+            if self.player2 and self.player2.rect.colliderect(fish.rect):
+                self.player2.take_damage(1)
+                self.player2.rect.y += 15
+                if self.hit_snd:
+                    self.hit_snd.play()
+
+        if (self.player and self.player.health <= 0) and (self.player2 and self.player2.health <= 0):
+            self.trigger_game_over("Both boats were wrecked!")
 
     def update_paused(self, dt_ms):
         pass
@@ -575,18 +681,27 @@ class LuckyLuresGame:
 
     def draw_hud(self):
         
-        text_score = self.font_small.render(f"Score: {self.score}", True, WHITE)
-        self.screen.blit(text_score, (10, 10))
+        text_score1 = self.font_small.render(f"P1 Score: {self.score}", True, WHITE)
+        self.screen.blit(text_score1, (10, 10))
+
+        text_score2 = self.font_small.render(f"P2 Score: {self.score_p2}", True, WHITE)
+        self.screen.blit(text_score2, (WIDTH - text_score2.get_width() - 10, 10))
 
         text_time = self.font_small.render(f"Time: {int(self.time_left)}s", True, WHITE)
-        self.screen.blit(text_time, (10, 35))
+        self.screen.blit(text_time, (WIDTH // 2 - text_time.get_width() // 2, 10))
+
         #players hp
-        for i in range(self.player.health):
-            pygame.draw.rect(self.screen, RED, (WIDTH - 25 - i * 20, 10, 15, 15))
+        if self.player:
+            for i in range(self.player.health):
+                pygame.draw.rect(self.screen, RED, (10 + i * 18, 35, 15, 15))
+        if self.player2:
+            for i in range(self.player2.health):
+                pygame.draw.rect(self.screen, RED, (WIDTH - 25 - i * 18, 35, 15, 15))
 
     def draw_menu(self):
 
         self.draw_river_background()
+
         #enter screen
         title = self.font_big.render("Lucky Lures: River Rush", True, WHITE)
         msg = self.font_med.render("Press ENTER to Start", True, WHITE)
@@ -601,16 +716,26 @@ class LuckyLuresGame:
         self.draw_river_background()
         #dibujar el fishingl ine
        
-        if self.player:
-            for lure in self.lures:
-                pygame.draw.line(self.screen, WHITE, self.player.rect.center, lure.rect.center, 2)
+        for lure in self.lures:
+            if lure.owner == "P2" and self.player2:
+                start_pos = self.player2.rect.center
+            else:
+                if not self.player:
+                    continue
+                start_pos = self.player.rect.center
+            pygame.draw.line(self.screen, WHITE, start_pos, lure.rect.center, 2)
 
         self.all_sprites.draw(self.screen)
         self.draw_hud()
 
+
+
     def draw_paused(self):
+
         self.draw_playing()
         #pause screen
+
+
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         self.screen.blit(overlay, (0, 0))
@@ -621,18 +746,38 @@ class LuckyLuresGame:
         self.screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 40))
         self.screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 + 10))
 
+
+
+
     def draw_game_over(self):
         self.draw_river_background()
+
     #game over screen
         title = self.font_big.render("Game Over", True, WHITE)
         reason = self.font_med.render(self.game_over_reason, True, WHITE)
-        score_text = self.font_med.render(f"Final Score: {self.score}", True, WHITE)
+        score_text = self.font_med.render(f"P1 Score: {self.score}", True, WHITE)
+        score_text_p2 = self.font_med.render(f"P2 Score: {self.score_p2}", True, WHITE)
+
+
+        if self.score > self.score_p2:
+            winner_text = f"P1 Wins!"
+        elif self.score_p2 > self.score:
+            winner_text = f"P2 Wins!"
+        else:
+            winner_text = "Tie Game!"
+
+        winner_render = self.font_med.render(winner_text, True, WHITE)
         msg = self.font_small.render("Press ENTER to return to Menu", True, WHITE)
 
         self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 3))
         self.screen.blit(reason, (WIDTH // 2 - reason.get_width() // 2, HEIGHT // 3 + 60))
+
+
         self.screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 3 + 110))
-        self.screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 3 + 160))
+        self.screen.blit(score_text_p2, (WIDTH // 2 - score_text_p2.get_width() // 2, HEIGHT // 3 + 150))
+        
+        self.screen.blit(winner_render, (WIDTH // 2 - winner_render.get_width() // 2, HEIGHT // 3 + 190))
+        self.screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 3 + 230))
 
     def run(self):
 
