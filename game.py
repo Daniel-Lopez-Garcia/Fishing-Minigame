@@ -1,3 +1,4 @@
+import math
 import random
 from pathlib import Path
 import pygame
@@ -19,6 +20,8 @@ from constants import (
     WIDTH,
     WHITE,
     RED,
+    IDLE_SHARK_DELAY_MS,
+    IDLE_SHARK_SPEED,
 )
 from sprites import Fish, Lure, Obstacle, PlayerBoat
 
@@ -249,7 +252,7 @@ class LuckyLuresGame:
                     if img:
                         self.predator_fish_images.append(img)
 
-        #if no predator images exists
+        #por si no hay fotos de depredadores
         if not self.predator_fish_images and self.friendly_fish_images:
             #usa fotos existentes
 
@@ -262,7 +265,7 @@ class LuckyLuresGame:
                 tinted.blit(overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 self.predator_fish_images.append(tinted)
 
-        #no tocar#lo toque jijija
+        #no tocar #lo toque jijija
         #ayuda a la secuencia de images de depredadores
         self.obstacle_frames = _load_sequence(
 
@@ -291,6 +294,8 @@ class LuckyLuresGame:
         self.lures = pygame.sprite.Group()
 
         self.player = None
+        self.last_player_move_time = pygame.time.get_ticks()
+        self.idle_threat_triggered = False
 
     def reset_game(self):
         self.all_sprites.empty()
@@ -310,6 +315,8 @@ class LuckyLuresGame:
         self.last_obstacle_spawn = current_time
         self.fish_spawn_interval = FISH_SPAWN_INTERVAL
         self.obstacle_spawn_interval = OBSTACLE_SPAWN_INTERVAL
+        self.last_player_move_time = current_time
+        self.idle_threat_triggered = False
 
         if self.music_loaded and not pygame.mixer.music.get_busy():
             pygame.mixer.music.set_volume(0.45)
@@ -437,6 +444,40 @@ class LuckyLuresGame:
             self.all_sprites.add(obstacle)
             self.obstacles.add(obstacle)
 
+    #funcion que previene que el jugador se quede quieto
+    def spawn_idle_predator(self):
+        if not self.player:
+            return
+
+        player_pos = pygame.math.Vector2(self.player.rect.center)
+
+        #de donde vendra el ataque
+        side = random.choice(("TOP", "BOTTOM", "LEFT", "RIGHT"))
+
+        if side == "TOP":
+            spawn_pos = pygame.math.Vector2(random.randint(40, WIDTH - 40), -60)
+        elif side == "BOTTOM":
+            spawn_pos = pygame.math.Vector2(random.randint(40, WIDTH - 40), HEIGHT + 60)
+        elif side == "LEFT":
+            spawn_pos = pygame.math.Vector2(-60, random.randint(40, HEIGHT - 40))
+        else:  #derecha
+            spawn_pos = pygame.math.Vector2(WIDTH + 60, random.randint(40, HEIGHT - 40))
+
+        direction = player_pos - spawn_pos
+
+        if direction.length() == 0:
+            direction = pygame.math.Vector2(0, 1)
+
+        velocity = direction.normalize() * IDLE_SHARK_SPEED #veloz
+        angle = math.degrees(math.atan2(velocity.x, velocity.y))
+        frames = _rotate_frames(self.obstacle_frames, angle)
+
+        obstacle = Obstacle(int(spawn_pos.x), int(spawn_pos.y),
+                            frames=frames, velocity=(velocity.x, velocity.y))
+        
+        self.all_sprites.add(obstacle)
+        self.obstacles.add(obstacle)
+
     def update_playing(self, dt_ms):
 
         self.time_left -= dt_ms / 1000.0
@@ -452,7 +493,18 @@ class LuckyLuresGame:
         keys = pygame.key.get_pressed()
         self.spawn_entities()
 
+        prev_center = self.player.rect.center
         self.player.update(keys)
+        if self.player.rect.center != prev_center:
+            self.last_player_move_time = pygame.time.get_ticks()
+            self.idle_threat_triggered = False
+
+        now_ticks = pygame.time.get_ticks()
+        if (not self.idle_threat_triggered and
+                now_ticks - self.last_player_move_time >= IDLE_SHARK_DELAY_MS):
+            self.spawn_idle_predator()
+            self.idle_threat_triggered = True
+
         for fish in self.fish_group:
             fish.update(dt_ms)
         for obs in self.obstacles:
