@@ -421,7 +421,7 @@ class LuckyLuresGame:
 
                         if self.splash_snd:
                             self.splash_snd.play()
-
+                #multiple casting
                 if event.key in (pygame.K_RSHIFT, pygame.K_RETURN) and self.player2 and self.player2.health > 0:
                     if sum(1 for l in self.lures if l.owner == "P2") < 3:
 
@@ -556,7 +556,7 @@ class LuckyLuresGame:
     def update_playing(self, dt_ms):
 
         self.time_left -= dt_ms / 1000.0
-        
+        #timer
         if self.time_left <= 0:
             self.time_left = 0
             self.trigger_game_over("Time's up!")
@@ -680,7 +680,7 @@ class LuckyLuresGame:
                                  (0, y, WIDTH, band_height // 2))
 
     def draw_hud(self):
-        
+        #socre boards
         text_score1 = self.font_small.render(f"P1 Score: {self.score}", True, WHITE)
         self.screen.blit(text_score1, (10, 10))
 
